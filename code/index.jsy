@@ -9,7 +9,7 @@ const p_writeFile = promisify @ writeFile
 
 hash_n_gzip.hashFile = hashFile
 hash_n_gzip.compressFile = compressFile
-export default function hash_n_gzip({minSize, hash_algorithm}) ::
+export default function hash_n_gzip({minSize, hash_algorithm}={}) ::
   return @{}
     name: 'hash-n-gzip'
     async onwrite(buildOpts) ::

@@ -1,6 +1,6 @@
 {
   "name": "rollup-plugin-hash-n-gzip",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Hash and gzip output files",
   "license": "MIT",
   "author": "Shane Holloway",
@@ -26,7 +26,7 @@
     "rollup-plugin-babel": "^3.0.2"
   },
   "scripts": {
-    "build": "rollup -c",
+    "build": "rollup --config",
     "watch": "npm -s run build -- --watch",
     "pretest": "npm -s run build",
     "test": "true"
