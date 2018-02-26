@@ -8,9 +8,9 @@ const plugins = [jsy_plugin()]
 export default {
 	input: 'code/index.jsy',
 	output: [
-		{file: pkg.module, format: 'es'},
-		{file: pkg.main, format: 'cjs'}],
-  sourcemap, external, plugins }
+		{file: pkg.module, format: 'es', sourcemap},
+		{file: pkg.main, format: 'cjs', sourcemap}],
+  external, plugins }
 
 
 function jsy_plugin() {

@@ -2,8 +2,9 @@ import * as path from 'path'
 import {promisify} from 'util'
 import {createHash} from 'crypto'
 import {createGzip} from 'zlib'
-import {stat, copyFile, writeFile, createReadStream, createWriteStream} from 'fs'
+import {stat, unlink, copyFile, writeFile, createReadStream, createWriteStream} from 'fs'
 const p_stat = promisify @ stat
+const p_unlink = promisify @ unlink
 const p_copyFile = promisify @ copyFile
 const p_writeFile = promisify @ writeFile
 
@@ -43,11 +44,17 @@ function compressFile(file, outfile, minSize) ::
   if ! minSize :: minSize = 14e3
 
   return p_stat(file).then @ stat => ::
-    if stat.size <= minSize :: return false
+    if stat.size <= minSize ::
+      // remove (possibly) existing .gz file
+      return unlink(outfile)
+        .then(fn_false, fn_false) // and return false
+
     return new Promise @ function(resolve, reject) ::
       createReadStream(file)
         .pipe @ createGzip()
         .pipe @ createWriteStream @ outfile
         .on @ 'error', reject
         .on @ 'finish', () => resolve(true)
+
+function fn_false() :: return false
 
