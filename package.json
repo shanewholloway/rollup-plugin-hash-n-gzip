@@ -1,6 +1,6 @@
 {
   "name": "rollup-plugin-hash-n-gzip",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "description": "Hash and gzip output files",
   "license": "MIT",
   "author": "Shane Holloway",

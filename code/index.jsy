@@ -46,7 +46,7 @@ function compressFile(file, outfile, minSize) ::
   return p_stat(file).then @ stat => ::
     if stat.size <= minSize ::
       // remove (possibly) existing .gz file
-      return unlink(outfile)
+      return p_unlink(outfile)
         .then(fn_false, fn_false) // and return false
 
     return new Promise @ function(resolve, reject) ::
