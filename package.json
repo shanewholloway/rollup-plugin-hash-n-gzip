@@ -1,29 +1,27 @@
 {
   "name": "rollup-plugin-hash-n-gzip",
-  "version": "1.0.3",
+  "version": "1.0.4-0",
   "description": "Hash and gzip output files",
   "license": "MIT",
   "author": "Shane Holloway",
   "homepage": "https://github.com/shanewholloway/rollup-plugin-hash-n-gzip#readme",
-  "main": "dist/rollup-plugin-hash-n-gzip.cjs.js",
-  "module": "dist/rollup-plugin-hash-n-gzip.esm.js",
-  "files": [
-    "dist"
+  "keywords": [
+    "rollup",
+    "rollup-plugin"
   ],
   "repository": {
     "type": "git",
     "url": "git+https://github.com/shanewholloway/rollup-plugin-hash-n-gzip.git"
   },
-  "keywords": [
-    "rollup",
-    "rollup-plugin"
+  "files": [
+    "cjs",
+    "esm"
   ],
+  "main": "cjs/index.js",
+  "module": "esm/index.js",
   "dependencies": {},
   "devDependencies": {
-    "babel-cli": "^6.26.0",
-    "babel-preset-jsy": "^0.10.1",
-    "rollup": "^0.56.3",
-    "rollup-plugin-babel": "^3.0.3"
+    "rollup": "^0.64.1"
   },
   "scripts": {
     "build": "rollup --config",
