@@ -1,6 +1,6 @@
 {
   "name": "rollup-plugin-hash-n-gzip",
-  "version": "1.0.4",
+  "version": "2.0.0",
   "description": "Hash and gzip output files",
   "license": "MIT",
   "author": "Shane Holloway",
@@ -21,12 +21,17 @@
   "module": "esm/index.js",
   "dependencies": {},
   "devDependencies": {
-    "rollup": "^0.64.1"
+    "rollup": "^0.64.1",
+    "rollup-plugin-hash-n-gzip": "file:."
   },
   "scripts": {
+    "clean": "rm -rf cjs/ esm/ test-out/ ",
     "build": "rollup --config",
     "watch": "npm -s run build -- --watch",
     "pretest": "npm -s run build",
-    "test": "true"
+    "posttest": "rm -rf test-out/",
+    "test": "npm -s run test:one",
+    "pretest:one": "rm -rf test-out/",
+    "test:one": "rollup --config test/test.rollup.config.js"
   }
 }

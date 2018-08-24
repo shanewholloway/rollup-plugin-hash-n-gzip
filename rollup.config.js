@@ -5,5 +5,5 @@ export default {
 	input: 'code/index.js',
 	output: [
 		{file: pkg.module, format: 'es'},
-		{file: pkg.main, format: 'cjs'}],
+		{file: pkg.main, format: 'cjs', exports: 'named'}],
   external }

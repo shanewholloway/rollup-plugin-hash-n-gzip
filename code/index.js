@@ -1,63 +1,76 @@
 const path = require('path')
-const {promisify} = require('util')
-const {createHash} = require('crypto')
-const {createGzip} = require('zlib')
-const {stat, unlink, copyFile, writeFile, createReadStream, createWriteStream} = require('fs')
+const { promisify } = require('util')
+const { createHash } = require('crypto')
+const p_gzip = promisify(require('zlib').gzip)
 
-const p_stat = promisify(stat)
-const p_unlink = promisify(unlink)
-const p_copyFile = promisify(copyFile)
-const p_writeFile = promisify(writeFile)
+// Updated to Rollup 0.64+ based on research from https://github.com/kryops/rollup-plugin-gzip (MIT)
+export default function hash_n_gzip({minSize, gzip_options, hash_algorithm, skip, altBase, onAltMapping}={}) {
+  if (null == hash_algorithm) hash_algorithm = 'sha1'
+  if (null == minSize) minSize = 14e3
+  if (null == skip) skip = fn => fn.startsWith('chunk-')
+  const gz = '.gz'
+  let altMapping = Object.create(null)
 
-hash_n_gzip.hashFile = hashFile
-hash_n_gzip.compressFile = compressFile
-export default function hash_n_gzip({minSize, hash_algorithm}={}) {
   return {
     name: 'hash-n-gzip',
-    async onwrite(buildOpts) {
-      const file = buildOpts.file
-      const gzfile = `${file}.gz`
-      const [h, compressed] = await Promise.all([
-        hashFile(file, hash_algorithm),
-        compressFile(file, gzfile, minSize) ])
+    async generateBundle(outputOpts, bundle, isWrite) {
+      if (!isWrite) return
 
-      const fname_parts = path.parse(file)
-      fname_parts.base = null
-      fname_parts.ext = `.${h}${fname_parts.ext}`
+      const outDir = outputOpts.dir || path.dirname(outputOpts.file)
+      if (null == altBase)
+        altBase = outDir.split(path.sep, 1)[0]
 
-      const dest_hash = path.format(fname_parts)
-      await Promise.all([
-        p_copyFile(file, dest_hash),
-        compressed && p_copyFile(gzfile, `${dest_hash}.gz`) ])
-      await p_writeFile(`${file}.lnk`, path.basename(dest_hash))
-} } }
+      const altRoot = path.relative(altBase, outDir)
+      const altNames = {}
 
-function hashFile(file, algorithm) {
-  if (! algorithm) algorithm = 'sha1'
-  return new Promise((resolve, reject) =>
-    createReadStream(file)
-      .pipe(createHash(algorithm))
-      .on('error', reject)
-      .on('data', h => resolve(h.toString('hex')))
-) }
+      for (const [outputFileName, bndl] of Object.entries(bundle)) {
+        if (skip(outputFileName, bndl)) continue
 
-function compressFile(file, outfile, minSize) {
-  if (! outfile) outfile = `${file}.gz`
-  if (! minSize) minSize = 14e3
+        const {name: basename, ext} = path.parse(outputFileName)
 
-  return p_stat(file).then(stat => {
-    if (stat.size <= minSize)
-      // remove (possibly) existing .gz file
-      return p_unlink(outfile)
-        .then(fn_false, fn_false) // and return false
+        const content = asOutputContent(bndl, outputFileName, outputOpts.sourcemap)
 
-    return new Promise((resolve, reject) =>
-      createReadStream(file)
-        .pipe(createGzip())
-        .pipe(createWriteStream(outfile))
-        .on('error', reject)
-        .on('finish', () => resolve(true))
-) }) }
+        const hash = '.' + createHash(hash_algorithm).update(content).digest('hex')
 
-function fn_false() { return false }
+        const hashFileName = basename + hash + ext
+        bundle[hashFileName] = content
+
+        altNames[path.join(altRoot, outputFileName)] = path.join(altRoot, hashFileName)
+
+        if (minSize < content.length) {
+          const gz_content = await p_gzip(content, gzip_options)
+          bundle[outputFileName + gz] = gz_content
+          bundle[hashFileName + gz] = gz_content
+        }
+      }
+
+      if (onAltMapping)
+        altMapping = onAltMapping(altNames, altRoot, altMapping) || altMapping
+    }
+} }
+
+
+/**
+ * Gets the string/buffer content from a file object.
+ * Important for adding source map comments
+ *
+ * Copied from rollup-plugin-gzip (MIT)
+ * https://github.com/kryops/rollup-plugin-gzip/blob/cf50b389a492de11683f9e9efbcd52ad9efc218f/src/index.ts#L74-L102
+ *
+ * Copied partially from rollup.writeOutputFile (MIT)
+ * https://github.com/rollup/rollup/blob/master/src/rollup/index.ts#L454
+ */
+export function asOutputContent(bndl, outputFileName, sourcemap) {
+  let code = bndl.code
+  if ('string' !== typeof code) return bndl
+
+  if (sourcemap && bndl.map) {
+      const url = 'inline' === sourcemap
+        ? bndl.map.toUrl()
+        : `${outputFileName}.map`
+
+      code += `//# source${ '' }MappingURL=${url}\n`
+  }
+  return code
+}
 
