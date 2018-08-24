@@ -26,17 +26,18 @@ export default function hash_n_gzip({minSize, gzip_options, hash_algorithm, skip
       for (const [outputFileName, bndl] of Object.entries(bundle)) {
         if (skip(outputFileName, bndl)) continue
 
+        const code = bndl.code
+        if (('string' !== typeof code) && !Buffer.isBuffer(code)) continue
+
+        const hash = '.' + createHash(hash_algorithm).update(code).digest('hex')
+
         const {name: basename, ext} = path.parse(outputFileName)
-
-        const content = asOutputContent(bndl, outputFileName, outputOpts.sourcemap)
-
-        const hash = '.' + createHash(hash_algorithm).update(content).digest('hex')
-
         const hashFileName = basename + hash + ext
-        bundle[hashFileName] = content
+        bundle[hashFileName] = bndl
 
         altNames[path.join(altRoot, outputFileName)] = path.join(altRoot, hashFileName)
 
+        const content = asOutputContent(bndl, hashFileName, outputOpts.sourcemap)
         if (minSize < content.length) {
           const gz_content = await p_gzip(content, gzip_options)
           bundle[outputFileName + gz] = gz_content
@@ -61,16 +62,14 @@ export default function hash_n_gzip({minSize, gzip_options, hash_algorithm, skip
  * https://github.com/rollup/rollup/blob/master/src/rollup/index.ts#L454
  */
 export function asOutputContent(bndl, outputFileName, sourcemap) {
-  let code = bndl.code
-  if ('string' !== typeof code) return bndl
-
+  let content = bndl.code
   if (sourcemap && bndl.map) {
       const url = 'inline' === sourcemap
         ? bndl.map.toUrl()
         : `${outputFileName}.map`
 
-      code += `//# source${ '' }MappingURL=${url}\n`
+      content += `\n//# source${ '' }MappingURL=${url}\n`
   }
-  return code
+  return content
 }
 

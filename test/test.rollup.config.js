@@ -2,7 +2,7 @@ const fs = require('fs')
 import rpi_hash_n_gzip from 'rollup-plugin-hash-n-gzip'
 
 const sourcemap = true //'inline'
-const plugins = [rpi_hash_n_gzip({minSize: 100, onAltMapping})]
+const plugins = [rpi_hash_n_gzip({minSize: 200, onAltMapping})]
 
 // NOTE: main-a, main-b and similar copied from https://github.com/rollup/rollup-starter-code-splitting (MIT)
 

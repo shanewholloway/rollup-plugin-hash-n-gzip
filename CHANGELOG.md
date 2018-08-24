@@ -1,5 +1,9 @@
 # rollup-plugin-hash-n-gzip
 
+## 2.0.1
+
+* Changed sourcemap reference url to include hash
+
 ## 2.0.0
 
 * Changed to use [new plugin API](https://github.com/rollup/rollup/wiki/Plugins#creating-plugins) with `rollup@0.64.x`.
