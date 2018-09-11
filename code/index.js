@@ -10,6 +10,7 @@ export default function hash_n_gzip({minSize, gzip_options, hash_algorithm, skip
   if (null == skip) skip = fn => fn.startsWith('chunk-')
   const gz = '.gz'
   let altMapping = Object.create(null)
+  let altErrors = Object.create(null)
 
   return {
     name: 'hash-n-gzip',
@@ -38,7 +39,7 @@ export default function hash_n_gzip({minSize, gzip_options, hash_algorithm, skip
         altNames[path.join(altRoot, outputFileName)] = path.join(altRoot, hashFileName)
 
         const content = asOutputContent(bndl, hashFileName, outputOpts.sourcemap)
-        if (minSize < content.length) {
+        if (minSize > 0 && minSize < content.length) {
           const gz_content = await p_gzip(content, gzip_options)
           bundle[outputFileName + gz] = gz_content
           bundle[hashFileName + gz] = gz_content
@@ -46,8 +47,21 @@ export default function hash_n_gzip({minSize, gzip_options, hash_algorithm, skip
       }
 
       if (onAltMapping)
-        altMapping = onAltMapping(altNames, altRoot, altMapping) || altMapping
-    }
+        altMapping = onAltMapping(altNames, altRoot, altMapping, altErrors) || altMapping
+    },
+    options(inputOptions) {
+      const idx = inputOptions.plugins.indexOf(this)
+      if (-1 === idx) return ;
+
+      inputOptions.plugins[idx] = {
+        __proto__: this,
+        buildEnd(err) {
+          if (null != err)
+            altErrors[inputOptions.input] = err
+          else delete altErrors[inputOptions.input]
+        } }
+      return inputOptions
+    },
 } }
 
 

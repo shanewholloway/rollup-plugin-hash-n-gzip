@@ -25,16 +25,16 @@ export default [
 
 
 let tid
-function onAltMapping(altNames, altRoot, ns) {
+function onAltMapping(altNames, altRoot, ns, errors) {
   Object.assign(ns, altNames)
   console.log(`onAltMapping for "${altRoot}"`)
 
   // debounce rebuilding depenent outputs as necessary. (e.g. index.html)
   clearTimeout(tid)
-  tid = setTimeout(rebuildRoot, 100, ns)
+  tid = setTimeout(rebuildRoot, 100, {ns, errors})
 }
 
-function rebuildRoot(ns) {
+function rebuildRoot({ns, errors}) {
   fs.writeFile('test-out/dynamic.json',
     JSON.stringify(ns, null, 2),
     err => err && console.error(err) )
@@ -72,5 +72,8 @@ function rebuildRoot(ns) {
   console.log()
 
   console.log(`mergedAltMapping:`, ns)
+  console.log()
+
+  console.log(`buildAltErrors:`, errors)
   console.log()
 }
