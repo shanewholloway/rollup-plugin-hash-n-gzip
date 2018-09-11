@@ -2,7 +2,7 @@ const fs = require('fs')
 import rpi_hash_n_gzip from 'rollup-plugin-hash-n-gzip'
 
 const sourcemap = true //'inline'
-const plugins = [rpi_hash_n_gzip({minSize: 200, onAltMapping})]
+const plugins = [rpi_hash_n_gzip({minSize: 200, onBuildUpdate})]
 
 // NOTE: main-a, main-b and similar copied from https://github.com/rollup/rollup-starter-code-splitting (MIT)
 
@@ -24,17 +24,7 @@ export default [
 ]
 
 
-let tid
-function onAltMapping(altNames, altRoot, ns, errors) {
-  Object.assign(ns, altNames)
-  console.log(`onAltMapping for "${altRoot}"`)
-
-  // debounce rebuilding depenent outputs as necessary. (e.g. index.html)
-  clearTimeout(tid)
-  tid = setTimeout(rebuildRoot, 100, {ns, errors})
-}
-
-function rebuildRoot({ns, errors}) {
+function onBuildUpdate(ns, errors) {
   fs.writeFile('test-out/dynamic.json',
     JSON.stringify(ns, null, 2),
     err => err && console.error(err) )

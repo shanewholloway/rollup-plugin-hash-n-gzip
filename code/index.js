@@ -3,14 +3,30 @@ const { promisify } = require('util')
 const { createHash } = require('crypto')
 const p_gzip = promisify(require('zlib').gzip)
 
+export default hash_n_gzip
+hash_n_gzip.debounce = debounce
+
 // Updated to Rollup 0.64+ based on research from https://github.com/kryops/rollup-plugin-gzip (MIT)
-export default function hash_n_gzip({minSize, gzip_options, hash_algorithm, skip, altBase, onAltMapping}={}) {
+export function hash_n_gzip({minSize, gzip_options, hash_algorithm, skip, altBase, ms_update, onBuildUpdate, onAltMapping}={}) {
   if (null == hash_algorithm) hash_algorithm = 'sha1'
   if (null == minSize) minSize = 14e3
   if (null == skip) skip = fn => fn.startsWith('chunk-')
   const gz = '.gz'
   let altMapping = Object.create(null)
   let altErrors = Object.create(null)
+
+  if (onBuildUpdate) {
+    if (onAltMapping)
+      throw new TypeError('Either onBuildUpdate or onAltMapping may be provided')
+    if ('function' !== typeof onBuildUpdate)
+      throw new TypeError('Expected onBuildUpdate to be a function')
+
+    onBuildUpdate = debounce(ms_update || 50, onBuildUpdate)
+    onAltMapping = function(names, root, mapping, errors) {
+      Object.assign(mapping, names)
+      onBuildUpdate(mapping, errors)
+    }
+  }
 
   return {
     name: 'hash-n-gzip',
@@ -49,6 +65,7 @@ export default function hash_n_gzip({minSize, gzip_options, hash_algorithm, skip
       if (onAltMapping)
         altMapping = onAltMapping(altNames, altRoot, altMapping, altErrors) || altMapping
     },
+
     options(inputOptions) {
       const idx = inputOptions.plugins.indexOf(this)
       if (-1 === idx) return ;
@@ -58,11 +75,26 @@ export default function hash_n_gzip({minSize, gzip_options, hash_algorithm, skip
         buildEnd(err) {
           if (null != err)
             altErrors[inputOptions.input] = err
-          else delete altErrors[inputOptions.input]
-        } }
+          else if (null != altErrors[inputOptions.input])
+            delete altErrors[inputOptions.input]
+          else return ;
+
+          if (onAltMapping)
+            altMapping = onAltMapping(null, null, altMapping, altErrors) || altMapping
+        }
+      }
+
       return inputOptions
     },
 } }
+
+
+export function debounce(ms, inner) {
+  let tid
+  return (...args) => (
+    tid = clearTimeout(tid),
+    tid = setTimeout(()=>inner(...args), ms) )
+}
 
 
 /**

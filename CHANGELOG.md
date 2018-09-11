@@ -1,5 +1,9 @@
 # rollup-plugin-hash-n-gzip
 
+## 2.2.0
+
+* Added `onBuildUpdate` standard implementation of onAltMapping
+
 ## 2.1.0
 
 * Added error tracking to onAltMapping callback
