@@ -1,5 +1,9 @@
 # rollup-plugin-hash-n-gzip
 
+## 2.1.0
+
+* Added error tracking to onAltMapping callback
+
 ## 2.0.1
 
 * Changed sourcemap reference url to include hash
