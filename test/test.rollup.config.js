@@ -24,9 +24,25 @@ export default [
 ]
 
 
-function onBuildUpdate(ns, errors) {
+const mapping = {}, sri_refs = {}
+const mergedBuildUpdate = debounce(100, onMergedBuildUpdate)
+function onBuildUpdate({updates}) {
+  if (updates) {
+    for (const [k,v] of updates) {
+      mapping[k] = v
+      sri_refs[k] = `src='${v.src}' integrity='${v.integrity}'`
+    }
+  }
+
+  mergedBuildUpdate(mapping, sri_refs)
+}
+
+function onMergedBuildUpdate(mapping, sri_refs) {
+  console.log(`merged:`, mapping)
+  console.log()
+
   fs.writeFile('test-out/dynamic.json',
-    JSON.stringify(ns, null, 2),
+    JSON.stringify(mapping, null, 2),
     err => err && console.error(err) )
 
   // Or use a templating engine here
@@ -34,9 +50,9 @@ function onBuildUpdate(ns, errors) {
 <!doctype html>
 <head>
   <title>rollup-plugin-hash-n-gzip example</title>
-  <script src='${ns['esm/first.js']}'></script>
-  <script type=module src='${ns['esm/main-a.js']}'></script>
-  <script type=module src='${ns['esm/main-b.js']}'></script>
+  <script ${sri_refs['esm/first.js']}></script>
+  <script type=module ${sri_refs['esm/main-a.js']}></script>
+  <script type=module ${sri_refs['esm/main-b.js']}></script>
 </head>
 <body>
   Look in your inspector
@@ -60,10 +76,13 @@ function onBuildUpdate(ns, errors) {
   console.log(index_html)
   console.log('~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~')
   console.log()
+}
 
-  console.log(`mergedAltMapping:`, ns)
-  console.log()
 
-  console.log(`buildAltErrors:`, errors)
-  console.log()
+function debounce(ms, fn_inner) {
+  let tid, apply_inner = args => fn_inner.apply(this, args)
+  return function () {
+    tid = clearTimeout(tid),
+    tid = setTimeout(apply_inner, ms, arguments)
+    return tid }
 }

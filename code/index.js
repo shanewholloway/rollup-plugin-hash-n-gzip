@@ -4,57 +4,58 @@ const { createHash } = require('crypto')
 const p_gzip = promisify(require('zlib').gzip)
 
 export default hash_n_gzip
-hash_n_gzip.debounce = debounce
 
 // Updated to Rollup 0.64+ based on research from https://github.com/kryops/rollup-plugin-gzip (MIT)
-export function hash_n_gzip({minSize, gzip_options, hash_algorithm, skip, altBase, ms_update, onBuildUpdate, onAltMapping}={}) {
-  if (null == hash_algorithm) hash_algorithm = 'sha1'
+export function hash_n_gzip({minSize, gzip_options, hash_algorithm, skip, contentBase, onBuildUpdate}={}) {
+  const plugin_name = 'hash-n-gzip'
+  if (null == hash_algorithm) hash_algorithm = 'sha256'
   if (null == minSize) minSize = 14e3
   if (null == skip) skip = fn => fn.startsWith('chunk-')
-  const gz = '.gz'
-  let altMapping = Object.create(null)
-  let altErrors = Object.create(null)
+  if (null != onBuildUpdate && 'function' !== typeof onBuildUpdate) {
+    if ('function' !== typeof onBuildUpdate.withBuildUpdater)
+      throw new TypeError('Expected onBuildUpdate to be a function or object implementing withBuildUpdater')
 
-  if (onBuildUpdate) {
-    if (onAltMapping)
-      throw new TypeError('Either onBuildUpdate or onAltMapping may be provided')
-    if ('function' !== typeof onBuildUpdate)
-      throw new TypeError('Expected onBuildUpdate to be a function')
-
-    onBuildUpdate = debounce(ms_update || 50, onBuildUpdate)
-    onAltMapping = function(names, root, mapping, errors) {
-      Object.assign(mapping, names)
-      onBuildUpdate(mapping, errors)
-    }
+    onBuildUpdate = onBuildUpdate.withBuildUpdater(plugin_name)
   }
 
+  const gz = '.gz'
+
   return {
-    name: 'hash-n-gzip',
+    name: plugin_name,
     async generateBundle(outputOpts, bundle, isWrite) {
       if (!isWrite) return
 
       const outDir = outputOpts.dir || path.dirname(outputOpts.file)
-      if (null == altBase)
-        altBase = outDir.split(path.sep, 1)[0]
+      if (null == contentBase)
+        contentBase = outDir.split(path.sep, 1)[0]
 
-      const altRoot = path.relative(altBase, outDir)
-      const altNames = {}
+      const outRoot = path.relative(contentBase, outDir)
 
+      const updates = []
       for (const [outputFileName, bndl] of Object.entries(bundle)) {
         if (skip(outputFileName, bndl)) continue
 
         const code = bndl.code
         if (('string' !== typeof code) && !Buffer.isBuffer(code)) continue
 
-        const hash = '.' + createHash(hash_algorithm).update(code).digest('hex')
+        const code_hash = createHash(hash_algorithm).update(code).digest('base64')
+          .replace(/\+/g,'-').replace(/\//g,'_').replace(/=/g,'')
 
         const {name: basename, ext} = path.parse(outputFileName)
-        const hashFileName = basename + hash + ext
+        const hashFileName = basename + '.' + code_hash + ext
         bundle[hashFileName] = bndl
 
-        altNames[path.join(altRoot, outputFileName)] = path.join(altRoot, hashFileName)
-
         const content = asOutputContent(bndl, hashFileName, outputOpts.sourcemap)
+        bundle[hashFileName+'.raw'+ext] = content
+
+        const hash_content = createHash(hash_algorithm).update(content).digest('base64')
+        const integrity = hash_algorithm + '-' + hash_content
+
+        const basic = path.join(outRoot, outputFileName)
+        const src = path.join(outRoot, hashFileName)
+        const entry = { basic, src, integrity }
+        updates.push([basic, entry])
+
         if (minSize > 0 && minSize < content.length) {
           const gz_content = await p_gzip(content, gzip_options)
           bundle[outputFileName + gz] = gz_content
@@ -62,39 +63,10 @@ export function hash_n_gzip({minSize, gzip_options, hash_algorithm, skip, altBas
         }
       }
 
-      if (onAltMapping)
-        altMapping = onAltMapping(altNames, altRoot, altMapping, altErrors) || altMapping
-    },
-
-    options(inputOptions) {
-      const idx = inputOptions.plugins.indexOf(this)
-      if (-1 === idx) return ;
-
-      inputOptions.plugins[idx] = {
-        __proto__: this,
-        buildEnd(err) {
-          if (null != err)
-            altErrors[inputOptions.input] = err
-          else if (null != altErrors[inputOptions.input])
-            delete altErrors[inputOptions.input]
-          else return ;
-
-          if (onAltMapping)
-            altMapping = onAltMapping(null, null, altMapping, altErrors) || altMapping
-        }
-      }
-
-      return inputOptions
+      if (0 !== updates.length && onBuildUpdate)
+        onBuildUpdate({updates})
     },
 } }
-
-
-export function debounce(ms, inner) {
-  let tid
-  return (...args) => (
-    tid = clearTimeout(tid),
-    tid = setTimeout(()=>inner(...args), ms) )
-}
 
 
 /**
@@ -110,11 +82,12 @@ export function debounce(ms, inner) {
 export function asOutputContent(bndl, outputFileName, sourcemap) {
   let content = bndl.code
   if (sourcemap && bndl.map) {
-      const url = 'inline' === sourcemap
-        ? bndl.map.toUrl()
-        : `${outputFileName}.map`
+    const url = 'inline' === sourcemap
+      ? bndl.map.toUrl()
+      : `${outputFileName}.map`
 
-      content += `\n//# source${ '' }MappingURL=${url}\n`
+    const nl = content.endsWith('\n') ? '' : '\n'
+    content += `${nl}//# source${ '' }MappingURL=${url}\n`
   }
   return content
 }

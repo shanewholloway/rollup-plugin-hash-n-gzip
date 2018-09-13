@@ -1,5 +1,9 @@
 # rollup-plugin-hash-n-gzip
 
+## 3.0.0
+
+* Factored out `onBuildUpdate`, `onAltMapping`, and error tracking into emerging [rollup-plugin-web-build-events](https://github.com/shanewholloway/rollup-plugin-web-build-events).
+
 ## 2.2.0
 
 * Added `onBuildUpdate` standard implementation of onAltMapping
