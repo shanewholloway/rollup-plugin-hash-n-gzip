@@ -2,7 +2,11 @@
 
 Hash and gzip outputs. Updated for Rollup 0.64+.
 
-Used for static serving of gzip compressed files with filename based cache busting.
+Used for static serving of gzip compressed files with filename based cache
+busting and source integrity calculation.
+
+Combine with [rollup-plugin-web-build-events](https://github.com/shanewholloway/rollup-plugin-web-build-events#DataLive)
+for an integrated live-reload development experience.
 
 ## Example
 
@@ -68,8 +72,8 @@ const plugins = [
     hash_algorithm: 'sha1',
     skip(outputFileName, bndl) {}, // allows excluding some bundles from processing (e.g. code splits)
 
-    altBase: null, // path that altNames and altRoot are relative to
-    onAltMapping(altNames, altRoot, altMapping) {}, // callback for each generateBundle processing
+    contentBase: null, // path that resolved updates are relative to
+    onBuildUpdate({updates}) {}, // callback for each generateBundle processing
   })
 ]
 ```
