@@ -5,7 +5,7 @@ Hash and gzip outputs. Updated for Rollup 0.64+.
 Used for static serving of gzip compressed files with filename based cache
 busting and source integrity calculation.
 
-Combine with [rollup-plugin-web-build-events](https://github.com/shanewholloway/rollup-plugin-web-build-events#DataLive)
+Combine with [rollup-plugin-web-build-events](https://github.com/shanewholloway/rollup-plugin-web-build-events#data-live)
 for an integrated live-reload development experience.
 
 ## Example
